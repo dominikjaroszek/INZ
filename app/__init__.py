@@ -18,7 +18,7 @@ from .config import db
 # from .services.followService import followbp
 # from .services.flightService import fligtbp
 # from .services.airportService import airportbp
-from .controllers.hello import airlinebp
+from .controllers.leagueController import leaguebp
 # from .services.roleService import rolebp
 
 def create_app():
@@ -57,7 +57,7 @@ def create_app():
     # app.register_blueprint(followbp)
     # app.register_blueprint(fligtbp)
     # app.register_blueprint(airportbp)
-    app.register_blueprint(airlinebp)
+    app.register_blueprint(leaguebp)
     # app.register_blueprint(rolebp)
 
     db.init_app(app)
