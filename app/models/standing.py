@@ -5,25 +5,36 @@ class Standing(db.Model):
     __tablename__ = 'standing'
 
     standing_id = db.Column(db.Integer, primary_key=True)
-    season_id = db.Column(db.Integer, db.ForeignKey('season.id'), nullable=False)
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    season_id = db.Column(db.Integer, db.ForeignKey('season.season_id'), nullable=False)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.team_id'), nullable=False)
     position = db.Column(db.Integer, nullable=False)
     points = db.Column(db.Integer, nullable=False)
-    Played = db.Column(db.Integer, nullable=False)
-    Win = db.Column(db.Integer, nullable=False)
-    Draw = db.Column(db.Integer, nullable=False)
-    Lose = db.Column(db.Integer, nullable=False)
-
-
-
-    GoalsFor = db.Column(db.Integer, nullable=False)
-    GoalsAgainst = db.Column(db.Integer, nullable=False)
-    GoalsDifference = db.Column(db.Integer, nullable=False)
-    Form = db.Column(db.String(100), nullable=False)
-    Status = db.Column(db.String(100), nullable=False)
-    LastUpdate = db.Column(db.String(100), nullable=False)
+    played = db.Column(db.Integer, nullable=False)
+    win = db.Column(db.Integer, nullable=False)
+    draw = db.Column(db.Integer, nullable=False)
+    lose = db.Column(db.Integer, nullable=False)
+    goalsFor = db.Column(db.Integer, nullable=False)
+    goalsAgainst = db.Column(db.Integer, nullable=False)
+    goalsDifference = db.Column(db.Integer, nullable=False)
+    form = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(100), nullable=False)
+    lastUpdate = db.Column(db.String(100), nullable=False)
+    
+    home_played = db.Column(db.Integer, nullable=False)
+    home_win = db.Column(db.Integer, nullable=False)
+    home_draw = db.Column(db.Integer, nullable=False)
+    home_lose = db.Column(db.Integer, nullable=False)
+    home_goalsFor = db.Column(db.Integer, nullable=False)
+    home_goalsAgainst = db.Column(db.Integer, nullable=False)
+    
+    away_played = db.Column(db.Integer, nullable=False)
+    away_win = db.Column(db.Integer, nullable=False)
+    away_draw = db.Column(db.Integer, nullable=False)
+    away_lose = db.Column(db.Integer, nullable=False)
+    away_goalsFor = db.Column(db.Integer, nullable=False)
+    away_goalsAgainst = db.Column(db.Integer, nullable=False)
+    
     Team = db.relationship('Team', backref='standing', lazy=True)
-    League = db.relationship('League', backref='standing', lazy=True)
     Season = db.relationship('Season', backref='standing', lazy=True) 
 
     def __repr__(self):

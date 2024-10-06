@@ -1,7 +1,6 @@
 # from app.controllers.airlineController import *
 from flask import blueprints
 from flask import Flask, jsonify
-from app.models.user import User
 from app.models.season import Season
 import requests
 airlinebp = blueprints.Blueprint('airlinebp', __name__)

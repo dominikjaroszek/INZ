@@ -7,4 +7,5 @@ leaguebp = blueprints.Blueprint('leaguebp', __name__)
 
 @leaguebp.route('/leagues', methods=['GET'])
 def leagues():
-    return jsonify(get_league_coverage())
+    update_all_data()
+    return jsonify(1)
