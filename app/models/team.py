@@ -3,10 +3,10 @@ from app.config import db
 
 class Team(db.Model):
     team_id = db.Column(db.Integer, primary_key=True)
-    nameTeam = db.Column(db.String(100), nullable=False)
+    team_name = db.Column(db.String(100), nullable=False)
     league_id = db.Column(db.Integer, db.ForeignKey('league.league_id'), nullable=False)
     logo = db.Column(db.String(100), nullable=False)
-    nameVenue = db.Column(db.String(100), nullable=False)
+    venue_name = db.Column(db.String(100), nullable=False)
     city = db.Column(db.String(100), nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
     founded = db.Column(db.Integer, nullable=False)
