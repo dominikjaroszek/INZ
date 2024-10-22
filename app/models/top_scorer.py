@@ -12,7 +12,7 @@ class TopScorer(db.Model):
     assists = db.Column(db.Integer, nullable=False)
 
     season = db.relationship('Season', backref=db.backref('top_scorer', lazy=True))
-    team = db.relationship('Team', backref=db.backref('top_scorer', lazy=True))
+    Team = db.relationship('Team', backref=db.backref('top_scorer', lazy=True))
 
     def __repr__(self):
         return f"<TopScorer {self.player_name}, Goals: {self.goals}>"

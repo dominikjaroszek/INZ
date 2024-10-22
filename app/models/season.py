@@ -8,8 +8,10 @@ class Season(db.Model):
     league_id = db.Column(db.Integer, db.ForeignKey('league.league_id'), nullable=False)
     start_year = db.Column(db.Integer, nullable=False)
     end_year = db.Column(db.Integer, nullable=False)
+    is_current = db.Column(db.Boolean, nullable=False)
 
     league = db.relationship('League', backref=db.backref('season', lazy=True))
 
     def __repr__(self):
         return f"<Season {self.start_year}/{self.end_year}>"
+    

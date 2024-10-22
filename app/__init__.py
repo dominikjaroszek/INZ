@@ -20,6 +20,9 @@ from .config import db
 # from .services.airportService import airportbp
 from .controllers.leagueController import league_bp
 from .controllers.matchController import match_bp
+from .controllers.fetchController import fetch_bp
+from .controllers.standingController import standing_bp
+from .controllers.topScorerController import topScorer_bp
 # from .services.roleService import rolebp
 
 def create_app():
@@ -60,6 +63,9 @@ def create_app():
     # app.register_blueprint(airportbp)
     app.register_blueprint(league_bp)
     app.register_blueprint(match_bp)
+    app.register_blueprint(fetch_bp)
+    app.register_blueprint(standing_bp)
+    app.register_blueprint(topScorer_bp)
     # app.register_blueprint(rolebp)
 
     db.init_app(app)
