@@ -32,6 +32,7 @@ def get_all_seasons(league_name):
 
     for season in seasons:
         season_info = {
+            "season_id": season.season_id,
             "start_year": season.start_year,
             "end_year": season.end_year
         }

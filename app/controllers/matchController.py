@@ -36,12 +36,23 @@ def finished_matches_by_league(league_name, limit, season_name):
     return jsonify(matches_list)
 
 # Endpoint do meczów live z danej ligi
-@match_bp.route('/live-matches/<string:season>/<string:league_name>', methods=['GET'])
-def live_matches_by_league(league_name,season):
-    if season == '2024-2025':
-        matches_list = get_live_matches_by_league(league_name)
-    else:
-        return jsonify({'data': 'Nie ma meczów live dla podanego sezonu'})
+@match_bp.route('/live/<string:league_name>', methods=['GET'])
+def live_matches_by_league(league_name):
+    matches_list = get_live_matches_by_league(league_name)
     if not matches_list:
-        abort(404, description="No live matches found for the given league.")
+        return jsonify({})
+    return jsonify(matches_list)
+
+
+#Endpoint do szczegółów meczu
+@match_bp.route('/match/<int:match_id>', methods=['GET'])
+def match_details(match_id):
+    match = get_match_by_id(match_id)
+    if not match:
+        abort(404, description="No match found for the given id.")
+    return jsonify(match)
+
+@match_bp.route('/live', methods=['GET'])
+def live_matches():
+    matches_list = get_live_all_matches()
     return jsonify(matches_list)

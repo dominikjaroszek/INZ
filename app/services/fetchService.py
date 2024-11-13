@@ -1,4 +1,5 @@
 from datetime import datetime
+import random
 from app.config import BASE_URL, db, HEADERS
 import requests
 from app.models.league import League
@@ -225,8 +226,12 @@ def update_league_data(league_id, season, start_year, end_year):
                         match_date=match_date,
                         venue_name=match_data['fixture']['venue']['name'],
                         round=match_data['league']['round'],
-                        status=match_data['fixture']['status']['short']
-
+                        status_short=match_data['fixture']['status']['short'],
+                        status_long=match_data['fixture']['status']['long'],
+                        type=match_type(match_data['fixture']['status']['short']),
+                        fans_rank_generally =  random.uniform(0, 1),
+                        fans_rank_attak=random.uniform(0, 1),
+                        fans_rank_defence=random.uniform(0, 1)
                     )
                     db.session.merge(match)
                 db.session.commit()
@@ -250,6 +255,137 @@ def update_league_data(league_id, season, start_year, end_year):
             print(f"Brak danych dla ligi {league_id} lub brak sezonu {season}.")
     else:
         print(f"Brak danych z API dla ligi {league_id}, sezon {season}")
+
+# Funkcja do aktualizacji matchów details takich jak shots_on_goal, shots_off_goal, total_shots, blocked_shots, shots_insidebox, shots_outsidebox, fouls, corner_kicks, offsides, ball_possession, yellow_cards, red_cards, goalkeeper_saves, total_passes, passes_accuracy, passes_percent po kolei
+# po kolei dla każdego meczu z sezonu 2024/2025
+#dodaj sprawdzenie czy w danym meczu już są dane i jeśli tak to nie pobieraj ich ponownie
+
+
+def update_match_details():
+    season = Season.query.filter_by(start_year=2024).first()
+    matches = Match.query.filter_by(season_id=season.season_id).all()
+    for match in matches:
+        # Check if match details are already populated
+        if match.shots_on_goal is not None:
+            url = f"{BASE_URL}fixtures?id={match.match_id}"
+            response = requests.get(url, headers=HEADERS)
+            data = response.json()
+            if response.status_code == 200 and 'response' in data:
+                match_data = data['response'][0]
+                match.shots_on_goal = match_data['statistics'][0]['shots']['on']
+                match.shots_off_goal = match_data['statistics'][0]['shots']['off']
+                match.total_shots = match_data['statistics'][0]['shots']['total']
+                match.blocked_shots = match_data['statistics'][0]['shots']['blocked']
+                match.shots_insidebox = match_data['statistics'][0]['shots']['insidebox']
+                match.shots_outsidebox = match_data['statistics'][0]['shots']['outsidebox']
+                match.fouls = match_data['statistics'][0]['fouls']
+                match.corner_kicks = match_data['statistics'][0]['corners']
+                match.offsides = match_data['statistics'][0]['offsides']
+                match.ball_possession = match_data['statistics'][0]['possession']
+                match.yellow_cards = match_data['statistics'][0]['cards']['yellow']
+                match.red_cards = match_data['statistics'][0]['cards']['red']
+                match.goalkeeper_saves = match_data['statistics'][0]['goals']['saves']
+                match.total_passes = match_data['statistics'][0]['passes']['total']
+                match.passes_accuracy = match_data['statistics'][0]['passes']['accuracy']
+                match.passes_percent = match_data['statistics'][0]['passes']['percent']
+                db.session.commit()
+        else:
+            print(f"Dane już są dla {match.match_id}")
+
+        time.sleep(7)
+
+
+def update_match_details_random():
+    seasons = Season.query.filter_by(start_year=2024).all()
+    
+    for season in seasons:
+        matches = Match.query.filter_by(season_id=season.season_id).all()
+        for match in matches:
+            # Check if match details are already populated
+            if match.home_team_shots_on_goal is None and match.type == 'Finished':
+                match.home_team_shots_on_goal = random.randint(0, 10)
+                match.home_team_shots_off_goal = random.randint(0, 10)
+                match.home_team_total_shots = random.randint(0, 10)
+                match.home_team_blocked_shots = random.randint(0, 10)
+                match.home_team_shots_insidebox = random.randint(0, 10)
+                match.home_team_shots_outsidebox = random.randint(0, 10)
+                match.home_team_fouls = random.randint(0, 10)
+                match.home_team_corner_kicks = random.randint(0, 10)
+                match.home_team_offsides = random.randint(0, 10)
+                match.home_team_ball_possession = random.randint(0, 10)
+                match.home_team_yellow_cards = random.randint(0, 10)
+                match.home_team_red_cards = random.randint(0, 10)
+                match.home_team_goalkeeper_saves = random.randint(0, 10)
+                match.home_team_total_passes = random.randint(0, 10)
+                match.home_team_passes_accuracy = random.randint(0, 10)
+                match.home_team_passes_percent = random.randint(0, 10)
+                match.away_team_shots_on_goal = random.randint(0, 10)
+                match.away_team_shots_off_goal = random.randint(0, 10)
+                match.away_team_total_shots = random.randint(0, 10)
+                match.away_team_blocked_shots = random.randint(0, 10)
+                match.away_team_shots_insidebox = random.randint(0, 10)
+                match.away_team_shots_outsidebox = random.randint(0, 10)
+                match.away_team_fouls = random.randint(0, 10)
+                match.away_team_corner_kicks = random.randint(0, 10)
+                match.away_team_offsides = random.randint(0, 10)
+                match.away_team_ball_possession = random.randint(0, 10)
+                match.away_team_yellow_cards = random.randint(0, 10)
+                match.away_team_red_cards = random.randint(0, 10)
+                match.away_team_goalkeeper_saves = random.randint(0, 10)
+                match.away_team_total_passes = random.randint(0, 10)
+                match.away_team_passes_accuracy = random.randint(0, 10)
+                match.away_team_passes_percent = random.randint(0, 10)
+            else:
+                print(f"Dane już są dla {match.match_id}")
+
+    db.session.commit()
+
+def match_type(short):
+    if short == 'TBD':
+        return 'Scheduled'
+    elif short == 'NS':
+        return 'Scheduled'
+    elif short == '1H':
+        return 'In Play'
+    elif short == 'HT':
+        return 'In Play'
+    elif short == 'HT':
+        return 'In Play'
+    elif short == '2H':
+        return 'In Play'
+    elif short == 'ET':
+        return 'In Play'
+    elif short == 'BT':
+        return 'In Play'
+    elif short == 'P':
+        return 'In Play'
+    elif short == 'PEN':
+        return 'In Play'
+    elif short == 'SUSP':
+        return 'In Play'
+    elif short == 'INT':
+        return 'In Play'
+    elif short == 'INT':
+        return 'In Play'
+    elif short == 'FT':
+        return 'Finished'
+    elif short == 'AET':
+        return 'Finished'
+    elif short == 'PEN':
+        return 'Finished'
+    elif short == 'PST':
+        return 'Postponed'
+    elif short == 'CANC':
+        return 'Cancelled'
+    elif short == 'ABD':
+        return 'Abandoned'
+    elif short == 'AWD':
+        return 'Not Played'
+    elif short == 'WO':
+        return 'Not Played'
+    elif short == 'LIVE':
+        return 'In Play'
+    return short
 
 # Funkcja do automatycznej aktualizacji danych dla lig 39 i 140
 def update_all_data():

@@ -9,9 +9,9 @@ class Season(db.Model):
     start_year = db.Column(db.Integer, nullable=False)
     end_year = db.Column(db.Integer, nullable=False)
     is_current = db.Column(db.Boolean, nullable=False)
-
+    
     league = db.relationship('League', backref=db.backref('season', lazy=True))
 
     def __repr__(self):
-        return f"<Season {self.start_year}/{self.end_year}>"
+        return f"<Season {self.season_id}>"
     
