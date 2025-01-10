@@ -78,7 +78,7 @@ def get_upcoming_matches_by_league(league_name, limit):
 
 def get_finished_rounds_by_league():
     now = datetime.now()
-    start_of_year = datetime(now.year, 1, 1)
+    start_of_year = "{0}-01-01".format(2023)
     
     leagues = db.session.query(League).all()
     matches_by_league = []
@@ -192,6 +192,7 @@ def get_match_by_id(match_id):
         match_dict = {
                 'match_id': match.match_id,
                 'match_date': match.match_date,
+                'capacity': match.home_team.capacity,
                 'league_name': match.season.league.league_name,
                 'home_team': match.home_team.team_name,
                 'away_team': match.away_team.team_name,

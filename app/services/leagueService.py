@@ -5,7 +5,7 @@ from app.models.standing import Standing
 
 def get_all_league_names():
     leagues = League.query.all()
-    return [{"league_id": league.league_id, "name": league.league_name} for league in leagues]
+    return [{"league_id": league.league_id, "name": league.league_name, "logo": league.logo} for league in leagues]
 
 def get_league(league_name, season):
     season_start_year = season.split("-")[0]

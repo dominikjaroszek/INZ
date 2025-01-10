@@ -229,9 +229,6 @@ def update_league_data(league_id, season, start_year, end_year):
                         status_short=match_data['fixture']['status']['short'],
                         status_long=match_data['fixture']['status']['long'],
                         type=match_type(match_data['fixture']['status']['short']),
-                        fans_rank_generally =  random.uniform(0, 1),
-                        fans_rank_attak=random.uniform(0, 1),
-                        fans_rank_defence=random.uniform(0, 1)
                     )
                     db.session.merge(match)
                 db.session.commit()
@@ -339,6 +336,18 @@ def update_match_details_random():
                 print(f"Dane już są dla {match.match_id}")
 
     db.session.commit()
+
+def count_fans_rank_generally(match_id):
+    match = Match.query.filter_by(match_id=match_id).first()
+    home_team = match.home_team
+    away_team = match.away_team
+    home_team_rank = home_team.fans_rank
+    away_team_rank = away_team.fans_rank
+    if home_team_rank and away_team_rank:
+        fans_rank_generally = (home_team_rank + away_team_rank) / 2
+        return fans_rank_generally
+    return None
+
 
 def match_type(short):
     if short == 'TBD':
