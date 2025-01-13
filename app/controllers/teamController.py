@@ -12,7 +12,7 @@ def get_team_by_name(team_name):
 
 @team_bp.route('/team/<string:team_name>/finished/<int:limit>', methods=['GET'])
 def get_team_matches_finished(team_name, limit):
-    matches = get_finished_matches(team_name, limit)
+    matches = get_finished_matches(team_name, limit, "2024-2025")
     return jsonify(matches)
 
 @team_bp.route('/team/<string:team_name>/upcoming/<int:limit>', methods=['GET'])

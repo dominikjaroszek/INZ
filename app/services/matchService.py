@@ -14,6 +14,41 @@ def get_upcoming_rounds():
     matches_by_league = []
 
     for league in leagues:
+        upcoming_matches = db.session.query(Match).join(Season).join(League).filter(
+            Match.type == 'Scheduled',
+            League.league_name == league.league_name,
+
+        ).order_by(Match.match_date).limit(10).all()
+
+        if not upcoming_matches:
+            continue
+
+        matches_by_league.append({
+            'league_name': league.league_name,
+            'matches': [{
+                'match_id': match.match_id,
+                'home_team': match.home_team.team_name,
+                'away_team': match.away_team.team_name,
+                'home_team_logo': match.home_team.logo,
+                'away_team_logo': match.away_team.logo,
+                'match_date': match.match_date,
+                'fans_rank_generally': match.fans_rank_generally,
+                'fans_rank_attak': match.fans_rank_attak,
+                'fans_rank_defence': match.fans_rank_defence,
+                'type': match.type,
+                'status': match.status_long
+            } for match in upcoming_matches]
+        })
+
+    return matches_by_league
+
+def get_upcoming_rounds_fans():
+    now = datetime.now()
+
+    leagues = db.session.query(League).all()
+    matches_by_league = []
+
+    for league in leagues:
         next_match = db.session.query(Match).join(Season).join(League).filter(
             Match.type == 'Scheduled',
             League.league_name == league.league_name
@@ -48,7 +83,6 @@ def get_upcoming_rounds():
         })
 
     return matches_by_league
-
 
 
 
@@ -174,6 +208,8 @@ def get_live_matches_by_league(league_name):
         'home_team': match.home_team.team_name,
         'away_team': match.away_team.team_name,
         'league_name': match.season.league.league_name,
+        'home_team_logo': match.home_team.logo,
+        'away_team_logo': match.away_team.logo,
         'home_score': match.home_score,
         'away_score': match.away_score,
         'match_date': match.match_date,
@@ -249,6 +285,7 @@ def get_match_by_id(match_id):
                 'home_team': match.home_team.team_name,
                 'away_team': match.away_team.team_name,
                 'home_team_logo': match.home_team.logo,
+                'capacity': match.home_team.capacity,
                 'away_team_logo': match.away_team.logo,
                 'home_score': match.home_score,
                 'away_score': match.away_score,
@@ -272,12 +309,18 @@ def get_live_all_matches():
 
     for match in matches:
         matches_data.append({
-            "match_id": match.match_id,
-            "home_team": match.home_team.team_name,
-            "away_team": match.away_team.team_name,
-            "home_score": match.home_score,
-            "away_score": match.away_score,
-            "match_date": match.match_date,
+        'match_id': match.match_id,
+        'home_team': match.home_team.team_name,
+        'away_team': match.away_team.team_name,
+        'league_name': match.season.league.league_name,
+        'home_team_logo': match.home_team.logo,
+        'away_team_logo': match.away_team.logo,
+        'home_score': match.home_score,
+        'away_score': match.away_score,
+        'match_date': match.match_date,
+        'type': match.type,
+        'venue_name': match.venue_name,
+        'status': match.status_long
         })
 
     return matches_data

@@ -38,5 +38,7 @@ def get_match_rating_avg(match_id):
     match_ratings = Match.query.filter_by(match_id=match_id).first().ratings
     match_ratings_sum = sum([rating.rating for rating in match_ratings])
     match_ratings_count = len(match_ratings)
+    if match_ratings_count == 0:
+        return 0
     return match_ratings_sum / match_ratings_count
 

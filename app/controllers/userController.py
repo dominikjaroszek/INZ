@@ -110,19 +110,18 @@ def refresh():
 @user_bp.route('/user/change_password', methods=['PATCH'])
 @token_required
 @role_required('user')
-def change_password(current_user):
+def change_password_controller(current_user):
     try:
         data = UserUpdate(**request.json)
     except ValidationError as e:
         return jsonify({"message": e.errors()}), 400
 
     user = get_user_by_id(current_user.user_id)
-    if not check_password_controller(user, data.password):
+    if not check_password_controller(user, data.oldPassword):
         return jsonify({'message': 'Nieprawidłowe hasło'}), 401
 
-    if data.password == data.new_password:
+    if data.oldPassword == data.newPassword:
         return jsonify({'message': 'Nowe hasło musi się różnić od starego'}), 400
 
-    user.password = data.new_password
-    db.session.commit()
+    change_password(data, user )
     return jsonify({'message': 'Hasło zmienione pomyślnie'}), 200

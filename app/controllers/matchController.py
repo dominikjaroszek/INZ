@@ -10,6 +10,11 @@ def upcoming_round():
     matches_by_league = get_upcoming_rounds()
     return jsonify(matches_by_league)
 
+@match_bp.route('/upcoming-matches/round/fans', methods=['GET'])
+def upcoming_round_fans():
+    matches_by_league = get_upcoming_rounds_fans()
+    return jsonify(matches_by_league)
+
 @match_bp.route('/upcoming-matches/<string:league_name>/<string:season>/<int:limit>', methods=['GET'])
 def upcoming_matches_by_league(league_name, limit, season):
     if season == '2024-2025':

@@ -54,10 +54,10 @@ class UserSearchModel(BaseModel):
         return v
 
 class UserUpdate(BaseModel):
-    password: str
-    new_password : str
+    oldPassword: str
+    newPassword : str
 
-    @field_validator('password')
+    @field_validator('oldPassword')
     def password_must_meet_criteria(cls, v):
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password must contain at least one uppercase letter')
@@ -67,7 +67,7 @@ class UserUpdate(BaseModel):
             raise ValueError('Password must contain at least one special character (e.g., ., !, @, etc.)')
         return v
     
-    @field_validator('new_password')
+    @field_validator('newPassword')
     def password_must_meet_criteria(cls, v):
         if not re.search(r'[A-Z]', v):
             raise ValueError('Password must contain at least one uppercase letter')

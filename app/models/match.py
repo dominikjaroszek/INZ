@@ -55,12 +55,9 @@ class Match(db.Model):
     fans_rank_attak = db.Column(db.Float, nullable=True)
     fans_rank_defence = db.Column(db.Float, nullable=True)
     
-    #Tylko nadchodzący mecz jednej drużyny,
-    #default away_team_shots_on_goal, away_score
-
     season = db.relationship('Season', backref=db.backref('matches', lazy=True))
     home_team = db.relationship('Team', foreign_keys=[home_team_id], backref=db.backref('home_matches', lazy=True))
     away_team = db.relationship('Team', foreign_keys=[away_team_id], backref=db.backref('away_matches', lazy=True))
 
     def __repr__(self):
-        return f"<Match {self.home_team.name} vs {self.away_team.name}>"
+        return f"<Match {self.home_team.team_name} vs {self.away_team.team_name} on {self.round}>"

@@ -15,7 +15,7 @@ from .controllers.topScorerController import topScorer_bp
 from .controllers.teamController import team_bp
 from .controllers.userController import user_bp
 from .controllers.matchRatingController import matchRating_bp
-
+from .controllers.apiController import api_bp
 
 def create_app():
     app = Flask(__name__)
@@ -27,7 +27,7 @@ def create_app():
     access_token_expires_minutes = int(os.getenv('ACCESS_TOKEN_EXPIRES_MINUTES', 5))
     refresh_token_expires_days = int(os.getenv('REFRESH_TOKEN_EXPIRES_DAYS', 7))
 
-    app.config['ACCESS_TOKEN_EXPIRES'] = timedelta(seconds=access_token_expires_minutes)
+    app.config['ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=access_token_expires_minutes)
     app.config['REFRESH_TOKEN_EXPIRES'] = timedelta(days=refresh_token_expires_days)
 
     CORS(app, resources={r"/*": {"origins": ["http://localhost:5173"]}})
@@ -40,7 +40,7 @@ def create_app():
     app.register_blueprint(team_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(matchRating_bp)
-
+    app.register_blueprint(api_bp)
     
 
     db.init_app(app)

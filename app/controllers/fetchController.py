@@ -11,5 +11,5 @@ def leagues():
 
 @fetch_bp.route('/match-details', methods=['GET'])
 def match_details():
-    update_match_details_random()
+    update_match_details_back(39)
     return jsonify(1)

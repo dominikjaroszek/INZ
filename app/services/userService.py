@@ -94,3 +94,8 @@ def change_data(data, user):
         user.surname = data.surname
     db.session.commit()
     return user
+
+def change_password(data, user):
+    user.set_password(data.newPassword)
+    db.session.commit()
+    return True
