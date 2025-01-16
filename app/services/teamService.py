@@ -69,8 +69,8 @@ def get_finished_matches(team_name, limit, season_name):
     matches = db.session.query(Match).join(Season).filter(
         (Match.home_team_id == team.team_id) | (Match.away_team_id == team.team_id), 
         Match.type == 'Not Played' or  Match.type == 'Abandoned' or Match.type == 'Finished',
-        Season.start_year == start_year,   # Filtrowanie po roku rozpoczęcia sezonu
-        Season.end_year == end_year,       # Filtrowanie po roku zakończenia sezonu
+        Season.start_year == start_year,   
+        Season.end_year == end_year,       
         Match.match_date < now,
     ).order_by(Match.match_date.desc()).limit(limit).all()
 

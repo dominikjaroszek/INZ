@@ -64,15 +64,12 @@ def fetch_top_scorers_data(league_id, season):
 def update_league_data(league_id, season, start_year, end_year):
     league_data = fetch_league_data(league_id, season)
     time.sleep(7)
-    # Sprawdź, czy dane zostały zwrócone prawidłowo i czy istnieje odpowiedź
     if league_data and 'league' in league_data and 'seasons' in league_data:
         league_info = league_data['league']
         season_info = next((s for s in league_data['seasons'] if s['year'] == season), None)
 
 
-        # Sprawdź, czy dane ligi są dostępne oraz czy jest odpowiedni sezon
         if league_info and season_info:
-            # Sprawdź, czy liga istnieje już w bazie
             league = League.query.filter_by(league_id=league_info['id']).first()
 
             if not league:
@@ -85,7 +82,6 @@ def update_league_data(league_id, season, start_year, end_year):
                 db.session.add(league)
                 db.session.commit()
 
-            # Sprawdź, czy sezon istnieje
             season_entry = Season.query.filter_by(league_id=league.league_id, start_year=season, end_year=season+1).first()
 
             if not season_entry:
@@ -94,7 +90,6 @@ def update_league_data(league_id, season, start_year, end_year):
                 db.session.add(season_entry)
                 db.session.commit()
 
-            # Pobierz i zapisz drużyny
             teams_data = fetch_teams_data(league_id, season)
             time.sleep(7)
             if teams_data:
@@ -235,7 +230,7 @@ def match_type(short):
         return 'In Play'
     return short
 
-# Funkcja do automatycznej aktualizacji danych dla lig 39 i 140
+
 def update_all_data():
     for league_id in [39,140]:# for league_id in [39, 140, 78]:  for season in [2023, 2024]:
         for season in [2023, 2024]:

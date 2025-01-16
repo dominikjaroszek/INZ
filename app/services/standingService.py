@@ -28,7 +28,7 @@ def get_standings(league_name, season):
             "goalDifference": standing.goalsDifference,
             "points": standing.points,
             "status": standing.status,
-            "form" : standing.form[-5:][::-1],  # Get the last 5 characters from form
+            "form" : standing.form[-5:][::-1],  
         })
 
 
@@ -36,22 +36,17 @@ def get_standings(league_name, season):
 
 
 def get_standings_home(league_name, season):
-    # Wyciągnięcie roku początkowego sezonu
     season_start_year = season.split('-')[0]
 
-    # Wyszukiwanie ligi i sezonu w bazie danych
     league = db.session.query(League).filter_by(league_name=league_name).first()
     season = db.session.query(Season).filter_by(league_id=league.league_id, start_year=season_start_year).first()
 
-    # Sprawdzanie, czy liga i sezon istnieją
     if not league or not season:
         return {'error': 'League or season not found'}
 
-    # Pobieranie tabeli ligowej
     standings = db.session.query(Standing).filter_by(season_id=season.season_id).order_by(Standing.position).all()
     standings_data = []
 
-    # Tworzenie listy wyników
     for standing in standings:
         standings_data.append({
             "team_name": standing.Team.team_name,
@@ -65,10 +60,8 @@ def get_standings_home(league_name, season):
             "points": standing.home_win * 3 + standing.home_draw, 
         })
 
-    # Sortowanie drużyn na podstawie punktów (od najwyższej do najniższej)
     standings_data.sort(key=lambda x: (x['points'], x['goalDifference']), reverse=True)
 
-    # Przypisywanie pozycji w tabeli
     for index, team in enumerate(standings_data, start=1):
         team['position'] = index
 

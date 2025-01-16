@@ -159,11 +159,9 @@ def get_finished_rounds_by_league():
 
 
 
-# Funkcja do pobrania określonej liczby zakończonych meczów z wybranej ligi
 def get_finished_matches_by_league(league_name, limit, season_name):
     now = datetime.now()
 
-    # Wyodrębnij lata z season_name
     try:
         start_year, end_year = map(int, season_name.split('-'))
     except ValueError:
@@ -172,8 +170,8 @@ def get_finished_matches_by_league(league_name, limit, season_name):
     finished_matches = db.session.query(Match).join(Season).join(League).filter(
         Match.match_date < now,
         League.league_name == league_name,
-        Season.start_year == start_year,   # Filtrowanie po roku rozpoczęcia sezonu
-        Season.end_year == end_year,       # Filtrowanie po roku zakończenia sezonu
+        Season.start_year == start_year,   
+        Season.end_year == end_year,       
         Match.type == 'Not Played' or  Match.type == 'Abandoned' or Match.type == 'Finished',
     ).options(joinedload(Match.home_team), joinedload(Match.away_team)) \
      .order_by(Match.match_date.desc()).limit(limit).all()

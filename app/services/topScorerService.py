@@ -25,7 +25,6 @@ def get_top_scorers(league_name, season):
 
     top_scorers_data.sort(key=lambda x: (x['goals'], x['assists']), reverse=True)
 
-    # Przypisywanie pozycji w tabeli
     for index, player in enumerate(top_scorers_data, start=1):
         player['position'] = index
 
@@ -54,7 +53,6 @@ def get_top_scorers_canadian(league_name, season):
 
     top_scorers_data.sort(key=lambda x: (x['points'], x['goals']), reverse=True)
 
-    # Przypisywanie pozycji w tabeli
     for index, player in enumerate(top_scorers_data, start=1):
         player['position'] = index
 

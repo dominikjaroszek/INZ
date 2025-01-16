@@ -23,8 +23,8 @@ def finished_Team(team1_id, start_year, end_year, limit):
     matches = db.session.query(Match).join(Season).filter(
         (Match.home_team_id == team.team_id) | (Match.away_team_id == team.team_id), 
         Match.type == 'Not Played' or  Match.type == 'Abandoned' or Match.type == 'Finished',
-        Season.start_year == start_year,   # Filtrowanie po roku rozpoczęcia sezonu
-        Season.end_year == end_year,       # Filtrowanie po roku zakończenia sezonu
+        Season.start_year == start_year,   
+        Season.end_year == end_year,       
         Match.match_date < now,
     ).order_by(Match.match_date.desc()).limit(limit).all()
 
@@ -32,7 +32,6 @@ def finished_Team(team1_id, start_year, end_year, limit):
 
 
 def oblicz_wskaznik_agresji(team1_id, team2_id):
-    # Pobierz wszystkie mecze drużyny 1
     matches_team1 = finished_Team(team1_id, 2024, 2025, 5)
     matches_team2 = finished_Team(team2_id, 2024, 2025, 5)
     print (f"Matches team1: {matches_team1}")
@@ -43,7 +42,7 @@ def oblicz_wskaznik_agresji(team1_id, team2_id):
         yellow_cards = 0
         red_cards = 0
 
-        # Dodaj statystyki z wybranych meczów
+       
         for match in recent_matches:
             fouls += (match.home_team_fouls or 0) + (match.away_team_fouls or 0)
             yellow_cards += (match.home_team_yellow_cards or 0) + (match.away_team_yellow_cards or 0)
@@ -58,28 +57,28 @@ def oblicz_wskaznik_agresji(team1_id, team2_id):
         print(f"Red cards: {red_cards}")    
         wg_raw = 0.4 * fouls + 0.35 * yellow_cards + 0.25 * red_cards
 
-        # Maksymalne wartości dla normalizacji
+        
         max_fouls = 100
         max_yellow_cards = 20
         max_red_cards = 5
         max_wg = 0.4 * max_fouls + 0.35 * max_yellow_cards + 0.25 * max_red_cards
         
         wg_normalized = wg_raw / max_wg if max_wg > 0 else 0
-        return wg_normalized * 100  # Zwróć wynik w procentach
+        return wg_normalized * 100  
 
-    # Oblicz wskaźniki dla obu drużyn
+   
     wg_team1 = oblicz_wg(matches_team1)
     wg_team2 = oblicz_wg(matches_team2)
 
 
-    # Definiowanie wag
-    waga_team1 = 0.6  # Przykład: drużyna 1 ma wagę 60%
-    waga_team2 = 0.4  # Przykład: drużyna 2 ma wagę 40%
+  
+    waga_team1 = 0.6  
+    waga_team2 = 0.4  
 
-    # Oblicz średnią ważoną
+    
     weighted_avg_wg = (wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2)
 
-    return round(weighted_avg_wg, 2)  # Zwróć wynik zaokrąglony do dwóch miejsc po przecinku
+    return round(weighted_avg_wg, 2)  
 
 
 def oblicz_wskaznik_wg_bramkoszczelnosc(team1_id, team2_id):
@@ -100,11 +99,11 @@ def oblicz_wskaznik_wg_bramkoszczelnosc(team1_id, team2_id):
             corners += (match.home_team_corner_kicks or 0) + (match.away_team_corner_kicks or 0)
             goals += (match.home_score or 0) + (match.away_score or 0)
             shots += (match.home_team_total_shots or 0) + (match.away_team_total_shots or 0)
-            penalties += (match.home_team_offsides or 0) + (match.away_team_offsides or 0)  # Assuming offsides as a proxy for penalties
+            penalties += (match.home_team_offsides or 0) + (match.away_team_offsides or 0)  
 
         wg_raw = 0.2 * possession + 0.05 * corners + 0.5 * goals + 0.3 * shots + 0.4 * penalties
 
-        # Maksymalne wartości dla normalizacji
+        
         max_possession = 100
         max_corners = 20
         max_goals = 5
@@ -112,17 +111,17 @@ def oblicz_wskaznik_wg_bramkoszczelnosc(team1_id, team2_id):
         max_penalties = 5
         max_wg = 0.2 * max_possession + 0.05 * max_corners + 0.5 * max_goals + 0.3 * max_shots + 0.4 * max_penalties
         wg_normalized = wg_raw / max_wg if max_wg > 0 else 0
-        return wg_normalized * 100  # Zwróć wynik w procentach
+        return wg_normalized * 100  
 
     wg_team1 = oblicz_wg(matches_team1)
     wg_team2 = oblicz_wg(matches_team2)
 
-    waga_team1 = 0.6  # Przykład: drużyna 1 ma wagę 60%
-    waga_team2 = 0.4  # Przykład: drużyna 2 ma wagę 40%
+    waga_team1 = 0.6  
+    waga_team2 = 0.4  
 
     weighted_avg_wg = (wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2)
 
-    return round(weighted_avg_wg, 2)  # Zwróć wynik zaokrąglony do dwóch miejsc po przecinku
+    return round(weighted_avg_wg, 2) 
 
 def oblicz_wskaznik_wg_ogólna(team1_id, team2_id):
 
@@ -176,9 +175,9 @@ def oblicz_wskaznik_wg_ogólna(team1_id, team2_id):
 
         wg_raw = 0.4 * form + 0.3 * offense - 0.1 * defense
 
-        max_form = 15  # Maksymalna forma w 5 meczach
-        max_offense = 20  # Założone maksymalne gole
-        max_defense = 20  # Założone maksymalne stracone gole
+        max_form = 15  
+        max_offense = 20  
+        max_defense = 20  
         max_wg = 0.4 * max_form + 0.3 * max_offense - 0.1 * max_defense
         wg_normalized = wg_raw / max_wg if max_wg > 0 else 0
         return wg_normalized * 100
@@ -207,16 +206,16 @@ def check_results(league_id):
 
         try:
             response = requests.get(url, headers=HEADERS, params=params)
-            response.raise_for_status()  # Rzuć wyjątek, jeśli status nie jest 2xx
+            response.raise_for_status() 
             data = response.json()
         except requests.RequestException as e:
             print(f"Błąd połączenia z API: {e}")
-            continue  # Pomijamy ten mecz i idziemy dalej
+            continue  
         except ValueError:
             print("Niepoprawna odpowiedź JSON")
             continue
 
-        # Sprawdzamy, czy "results" i "response" istnieją i czy są niepuste
+       
         if data.get("results", 0) > 0 and "response" in data:
             print(f"Znaleziono dane dla meczu {match.match_id}")
             return True
@@ -255,7 +254,7 @@ def update_standing(league_id):
 
         if standing_db:
             print(f"Znaleziono rekord dla drużyny {team.team_name}")
-        # Jeśli rekord nie istnieje, utwórz nowy
+      
         if not standing_db:
             standing_db = Standing(team_id=team_id)
 
@@ -263,7 +262,7 @@ def update_standing(league_id):
         standing_update_utc = datetime.fromisoformat(standing_update_utc_str)
         standing_update = standing_update_utc.astimezone(pytz.timezone('Europe/Warsaw'))
 
-        # Zaktualizuj wszystkie odpowiednie kolumny
+        
         standing_db.position = standing_data["rank"]
         standing_db.points = standing_data["points"]
         standing_db.played = standing_data['all']['played']
@@ -288,18 +287,18 @@ def update_standing(league_id):
         standing_db.away_goalsFor = standing_data['away']['goals']['for']
         standing_db.away_goalsAgainst = standing_data['away']['goals']['against']
 
-        # Wymuszenie zapisu
+   
         db.session.merge(standing_db)
     db.session.commit()
 
 
 def update_top_scorers(league_id):
-    # Pobierz aktywny sezon dla ligi
+    
     season = Season.query.filter_by(league_id=league_id, is_current=True).first()
     if not season:
         raise ValueError(f"Brak aktywnego sezonu dla league_id: {league_id}")
     
-    season_id = season.season_id  # Używamy unikalnego ID sezonu
+    season_id = season.season_id  
     top_scorers_data = fetch_top_scorers_data(league_id, season.start_year)
     time.sleep(7)
     
@@ -310,7 +309,7 @@ def update_top_scorers(league_id):
             goals = scorer_data['statistics'][0]['goals']['total']
             assists = scorer_data['statistics'][0]['goals']['assists']
 
-            # Sprawdź, czy rekord już istnieje w bazie
+           
             top_scorer = TopScorer.query.filter_by(
                 season_id=season_id,
                 player_name=player_name,
@@ -318,12 +317,12 @@ def update_top_scorers(league_id):
             ).first()
 
             if top_scorer:
-                # Zaktualizuj wszystkie kolumny, jeśli rekord już istnieje
+              
                 top_scorer.goals = goals
                 top_scorer.assists = assists
-                db.session.merge(top_scorer)  # Używamy merge, aby zaktualizować wszystkie kolumny
+                db.session.merge(top_scorer)  
             else:
-                # Jeśli rekord nie istnieje, dodaj nowy
+
                 new_top_scorer = TopScorer(
                     season_id=season_id,
                     player_name=player_name,
@@ -333,7 +332,7 @@ def update_top_scorers(league_id):
                 )
                 db.session.add(new_top_scorer)
             
-        db.session.commit()  # Zatwierdź wszystkie zmiany po zakończeniu pętli
+        db.session.commit()  
 
 import requests
 
@@ -343,19 +342,19 @@ def update_matches(league_id):
     season = Season.query.filter_by(league_id=league_id, is_current=True).first()
     season_year = season.start_year if season else None
 
-    # Pobranie meczów w stanie "Scheduled"
+   
     matches_scheduled = Match.query.filter(
         Match.type == "Scheduled", Match.season_id == season.season_id, Match.match_date < now
     ).all()
 
-    # Pobranie danych meczów z podstawowego endpointu
+   
     matches_data = fetch_matches_data(league_id, season_year)
     time.sleep(7)
     for match in matches_scheduled:
-        # Znalezienie danych podstawowych dla meczu
+        
         match_data = next((x for x in matches_data if x['fixture']['id'] == match.match_id), None)
         if match_data:
-            # Aktualizacja podstawowych danych
+            
             match.home_score = match_data['goals']['home']
             match.away_score = match_data['goals']['away']
             match.referee =match_data['fixture']['referee'],
@@ -365,20 +364,20 @@ def update_matches(league_id):
             match.status_long = match_data['fixture']['status']['long']
             match.type=match_type(match_data['fixture']['status']['short']),
 
-            # Pobranie szczegółowych statystyk z API
+            
             stats_url = f"{BASE_URL}fixtures/statistics?fixture={match.match_id}"
             response = requests.get(stats_url, headers=HEADERS)
             if response.status_code == 200:
                 stats_data = response.json().get('response', [])
                 time.sleep(7)
-                # Przetwarzanie szczegółowych statystyk
+                
                 stats_dict = {}
                 for team_stats in stats_data:
                     team_id = team_stats['team']['id']
                     team_statistics = {stat['type']: stat['value'] for stat in team_stats['statistics']}
                     stats_dict[team_id] = team_statistics
 
-                # Zapis statystyk drużyny domowej
+               
                 home_stats = stats_dict.get(match.home_team_id, {})
                 match.home_team_shots_on_goal = home_stats.get("Shots on Goal", None)
                 match.home_team_shots_off_goal = home_stats.get("Shots off Goal", None)
@@ -401,7 +400,7 @@ def update_matches(league_id):
                     float(home_stats.get("Passes %", "0%").replace("%", "")) if "Passes %" in home_stats else None
                 )
 
-                # Zapis statystyk drużyny gości
+              
                 away_stats = stats_dict.get(match.away_team_id, {})
                 match.away_team_shots_on_goal = away_stats.get("Shots on Goal", None)
                 match.away_team_shots_off_goal = away_stats.get("Shots off Goal", None)
@@ -506,25 +505,25 @@ def update_wskazniki(league_id):
         db.session.commit()
 
 def extract_round_number(round_name):
-    # Wyciągnij liczbę z nazwy rundy, np. "Regular Season - 9" -> 9
+    
     match = re.search(r'\d+', round_name)
     return int(match.group()) if match else 0
 
 
 def update_match_details_back(league_id):
-    # Pobierz obecny sezon
+   
     season = Season.query.filter_by(is_current=True, league_id=league_id).first()
 
-    # Pobierz zakończone mecze dla tego sezonu
+    
     matches = Match.query.join(Season).filter(
         Match.type == 'Finished',
         Season.season_id == season.season_id
     ).all()
 
-    # Posortuj mecze po numerze rundy (od najnowszej do najstarszej)
+    
     matches = sorted(matches, key=lambda x: extract_round_number(x.round), reverse=True)
 
-    # Ogranicz do 5 ostatnich rund
+    
     rounds = set()
     limited_matches = []
     for match in matches:
@@ -543,14 +542,14 @@ def update_match_details_back(league_id):
         if response.status_code == 200:
             stats_data = response.json().get('response', [])
             time.sleep(7)
-            # Przetwarzanie szczegółowych statystyk
+           
             stats_dict = {}
             for team_stats in stats_data:
                 team_id = team_stats['team']['id']
                 team_statistics = {stat['type']: stat['value'] for stat in team_stats['statistics']}
                 stats_dict[team_id] = team_statistics
 
-            # Zapis statystyk drużyny domowej
+          
             home_stats = stats_dict.get(match.home_team_id, {})
             match.home_team_shots_on_goal = home_stats.get("Shots on Goal", 0)
             match.home_team_shots_off_goal = home_stats.get("Shots off Goal", 0)
@@ -573,7 +572,7 @@ def update_match_details_back(league_id):
                 float(home_stats.get("Passes %", "0%").replace("%", "")) if "Passes %" in home_stats else 0
             )
 
-            # Zapis statystyk drużyny gości
+          
             away_stats = stats_dict.get(match.away_team_id, {})
             match.away_team_shots_on_goal = away_stats.get("Shots on Goal", 0)
             match.away_team_shots_off_goal = away_stats.get("Shots off Goal", 0)
@@ -622,19 +621,16 @@ def my_function():
 import random
 
 def update_match_details_back_test(league_id):
-    # Pobierz obecny sezon
+   
     season = Season.query.filter_by(is_current=True, league_id=league_id).first()
 
-    # Pobierz zakończone mecze dla tego sezonu
     matches = Match.query.join(Season).filter(
         Match.type == 'Finished',
         Season.season_id == season.season_id
     ).all()
 
-    # Posortuj mecze po numerze rundy (od najnowszej do najstarszej)
     matches = sorted(matches, key=lambda x: extract_round_number(x.round), reverse=True)
 
-    # Ogranicz do 5 ostatnich rund
     rounds = set()
     limited_matches = []
     for match in matches:
@@ -648,7 +644,7 @@ def update_match_details_back_test(league_id):
             continue
 
     for match in limited_matches:
-        # Generowanie losowych statystyk zamiast pobierania ich z zewnętrznego źródła
+        
         match.home_team_shots_on_goal = random.randint(1, 10)
         match.home_team_shots_off_goal = random.randint(1, 10)
         match.home_team_total_shots = random.randint(1, 10)

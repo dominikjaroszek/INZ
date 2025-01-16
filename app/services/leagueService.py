@@ -36,9 +36,7 @@ def get_all_seasons(league_name):
             "start_year": season.start_year,
             "end_year": season.end_year
         }
-        # Sprawdź, czy sezon jest zakończony
         if not season.is_current:
-            # Pobierz zwycięzcę ligi dla danego sezonu
             winner = Standing.query.filter_by(season_id=season.season_id, position=1).first()
             if winner:
                 team = Team.query.get(winner.team_id)

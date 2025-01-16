@@ -3,7 +3,6 @@ import os
 
 db = SQLAlchemy()
 
-
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 API_KEY = 'e1585dfda852e31d5849162cb7a24b24'
