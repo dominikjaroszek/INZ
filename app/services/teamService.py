@@ -5,8 +5,11 @@ from datetime import datetime
 from app.models.league import League
 from app.models.season import Season
 
+def get_team_by_name(team_name):
+    return db.session.query(Team).filter_by(team_name=team_name).first()
+
 def get_team(teamName):
-    team = db.session.query(Team).filter_by(team_name=teamName).first()
+    team = get_team_by_name(teamName)
     if not team:
         return {'error': 'Team not found'}
     
@@ -23,21 +26,25 @@ def get_team(teamName):
             "country": team.league.country
         }
 
-
     return  team_data
 
-
-def get_upcoming_matches(team_name, limit):
+def get_team_upcoming(team, limit):
     now = datetime.now()
-    team = db.session.query(Team).filter_by(team_name=team_name).first()
-    if not team:
-        return {'error': 'Team not found'}
-    
-    matches = db.session.query(Match).filter(
+
+    return db.session.query(Match).filter(
         (Match.home_team_id == team.team_id) | (Match.away_team_id == team.team_id), 
         Match.type == 'Scheduled',
         Match.match_date >= now.date()
     ).order_by(Match.match_date).limit(limit).all()
+
+def get_upcoming_matches(team_name, limit):
+    
+    team = get_team_by_name(team_name)
+    if not team:
+        return {'error': 'Team not found'}
+    
+    matches = get_team_upcoming(team, limit)
+
     matches_data = []
 
     for match in matches:
@@ -54,19 +61,10 @@ def get_upcoming_matches(team_name, limit):
 
     return matches_data
 
-def get_finished_matches(team_name, limit, season_name):
+def get_team_finished(team, limit , start_year, end_year):
     now = datetime.now()
 
-    try:
-        start_year, end_year = map(int, season_name.split('-'))
-    except ValueError:
-        raise ValueError("Błędny format sezonu. Prawidłowy format to 'YYYY-YYYY'.")
-
-    team = db.session.query(Team).filter_by(team_name=team_name).first()
-    if not team:
-        return {'error': 'Team not found'}
-    
-    matches = db.session.query(Match).join(Season).filter(
+    return  db.session.query(Match).join(Season).filter(
         (Match.home_team_id == team.team_id) | (Match.away_team_id == team.team_id), 
         Match.type == 'Not Played' or  Match.type == 'Abandoned' or Match.type == 'Finished',
         Season.start_year == start_year,   
@@ -74,7 +72,17 @@ def get_finished_matches(team_name, limit, season_name):
         Match.match_date < now,
     ).order_by(Match.match_date.desc()).limit(limit).all()
 
+def get_finished_matches(team_name, limit, season_name):
+    try:
+        start_year, end_year = map(int, season_name.split('-'))
+    except ValueError:
+        raise ValueError("Błędny format sezonu. Prawidłowy format to 'YYYY-YYYY'.")
 
+    team = get_team_by_name(team_name )
+    if not team:
+        return {'error': 'Team not found'}
+    
+    matches = get_team_finished(team, limit, start_year, end_year)
 
     matches_data = []
 
@@ -92,17 +100,20 @@ def get_finished_matches(team_name, limit, season_name):
 
     return matches_data
 
-def get_live_match(team_name):
-    team = db.session.query(Team).filter_by(team_name=team_name).first()
-    if not team:
-        return {'error': 'Team not found'}
-    
-    match = db.session.query(Match).filter(
+def get_team_live(team):
+
+    return db.session.query(Match).filter(
         (Match.home_team_id == team.team_id) | (Match.away_team_id == team.team_id), 
         Match.type == 'In Play',
     ).first()
+    
+def get_live_match(team_name):
+    team = get_team_by_name(team_name)
+    if not team:
+        return {'error': 'Team not found'}
+    
+    match = get_team_live(team)
     match_data = {}
-
     if match:
         match_data = {
             "match_id": match.match_id,

@@ -2,7 +2,6 @@ from datetime import datetime
 import random
 from app.config import BASE_URL, db, HEADERS
 import requests
-from app.models.league import League
 from app.models.season import Season
 from app.models.team import Team
 from app.models.standing import Standing
@@ -10,188 +9,250 @@ from app.models.match import Match
 from app.models.top_scorer import TopScorer
 from app.services.fetchService import *
 import pytz
-import threading
 import time
-
-def finished_Team(team1_id, start_year, end_year, limit):
-
-    now = datetime.now()
-    team = db.session.query(Team).filter_by(team_id=team1_id).first()
-    if not team:
-        return {'error': 'Team not found'}
-    
-    matches = db.session.query(Match).join(Season).filter(
-        (Match.home_team_id == team.team_id) | (Match.away_team_id == team.team_id), 
-        Match.type == 'Not Played' or  Match.type == 'Abandoned' or Match.type == 'Finished',
-        Season.start_year == start_year,   
-        Season.end_year == end_year,       
-        Match.match_date < now,
-    ).order_by(Match.match_date.desc()).limit(limit).all()
-
-    return matches
+from app.services.standingService import get_standing_team
+from app.services.matchService import finished_last_match,next_round_league, get_upcoming_matches_by_round
 
 
-def oblicz_wskaznik_agresji(team1_id, team2_id):
-    matches_team1 = finished_Team(team1_id, 2024, 2025, 5)
-    matches_team2 = finished_Team(team2_id, 2024, 2025, 5)
-    print (f"Matches team1: {matches_team1}")
+def oblicz_faule(match):
+    return (match.home_team_fouls or 0) + (match.away_team_fouls or 0)
 
-    def oblicz_wg(recent_matches):
+def oblicz_zolte_kartki(match):
+    return (match.home_team_yellow_cards or 0) + (match.away_team_yellow_cards or 0)
 
-        fouls = 0
-        yellow_cards = 0
-        red_cards = 0
+def oblicz_czerwone_kartki(match):
+    return (match.home_team_red_cards or 0) + (match.away_team_red_cards or 0)
 
-       
-        for match in recent_matches:
-            fouls += (match.home_team_fouls or 0) + (match.away_team_fouls or 0)
-            yellow_cards += (match.home_team_yellow_cards or 0) + (match.away_team_yellow_cards or 0)
-            red_cards += (match.home_team_red_cards or 0) + (match.away_team_red_cards or 0)
-            print(f"Match: {match.match_id}")
-            print (f"Fauls: {match.home_team_fouls}")
-            print(f"Yellow cards: {yellow_cards}")
-            print(f"Red cards: {red_cards}")
+def oblicz_statystyki_druzyny(recent_matches):
+    fouls, yellow_cards, red_cards = 0, 0, 0
 
-        print(f"Fauls: {fouls}")
-        print(f"Yellow cards: {yellow_cards}")
-        print(f"Red cards: {red_cards}")    
-        wg_raw = 0.4 * fouls + 0.35 * yellow_cards + 0.25 * red_cards
+    for match in recent_matches:
+        fouls += oblicz_faule(match)
+        yellow_cards += oblicz_zolte_kartki(match)
+        red_cards += oblicz_czerwone_kartki(match)
 
-        
-        max_fouls = 100
-        max_yellow_cards = 20
-        max_red_cards = 5
-        max_wg = 0.4 * max_fouls + 0.35 * max_yellow_cards + 0.25 * max_red_cards
-        
-        wg_normalized = wg_raw / max_wg if max_wg > 0 else 0
-        return wg_normalized * 100  
+    max_fouls = 25 * len(recent_matches)
+    max_yellow_cards = 5 * len(recent_matches)
+    max_red_cards = 2 * len(recent_matches)
 
+    fouls = min(fouls, max_fouls)
+    yellow_cards = min(yellow_cards, max_yellow_cards)
+    red_cards = min(red_cards, max_red_cards)
+
+    return znormalizuj_wg(fouls, yellow_cards, red_cards, max_fouls, max_yellow_cards, max_red_cards)
+
+
+def znormalizuj_wg(fouls, yellow_cards, red_cards, max_fouls, max_yellow_cards, max_red_cards):
+    wg_raw = 0.4 * fouls + 0.35 * yellow_cards + 0.25 * red_cards
+    max_wg = 0.4 * max_fouls + 0.35 * max_yellow_cards + 0.25 * max_red_cards
+    return (wg_raw / max_wg * 100) if max_wg > 0 else 0
+
+
+def oblicz_wskaznik_agresji(match):
+    team1_id = match.home_team_id
+    team2_id = match.away_team_id
+
+    matches_team1 = finished_last_match(team1_id, match.season.start_year, match.season.end_year, 5)
+    matches_team2 = finished_last_match(team2_id, match.season.start_year, match.season.end_year, 5)
+
+    wg_team1 = oblicz_statystyki_druzyny(matches_team1)
+    wg_team2 = oblicz_statystyki_druzyny(matches_team2)
+
+    return wylicz_wazona_srednia(wg_team1, wg_team2, waga_team1=0.6, waga_team2=0.4)
+
+
+def wylicz_wazona_srednia(wg_team1, wg_team2, waga_team1=0.6, waga_team2=0.4):
+    """Wylicza średnią ważoną wskaźnika agresji dla dwóch drużyn."""
+    return round((wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2), 2)
+
+
+def oblicz_possession(match):
+    return (match.home_team_ball_possession or 0) + (match.away_team_ball_possession or 0)
+
+def oblicz_corners(match):
+    return (match.home_team_corner_kicks or 0) + (match.away_team_corner_kicks or 0)
+
+def oblicz_goals(match):
+    return (match.home_score or 0) + (match.away_score or 0)
+
+def oblicz_shots(match):
+    return (match.home_team_total_shots or 0) + (match.away_team_total_shots or 0)
+
+def oblicz_penalties(match):
+    return (match.home_team_offsides or 0) + (match.away_team_offsides or 0)
+
+def oblicz_wskaznik_wg_bramkoszczelnosc(match):
+    """Oblicza wskaźnik bramkoszczelności na podstawie ostatnich meczów obu drużyn."""
+    team1_id = match.home_team_id
+    team2_id = match.away_team_id
+
+    matches_team1 = finished_last_match(team1_id, match.season.start_year, match.season.end_year, 5)
+    matches_team2 = finished_last_match(team2_id, match.season.start_year, match.season.end_year, 5)
+
+    wg_team1 = oblicz_statystyki_bramkoszczelnosci(matches_team1)
+    wg_team2 = oblicz_statystyki_bramkoszczelnosci(matches_team2)
+
+    return wylicz_srednia_wazona(wg_team1, wg_team2, waga_team1=0.6, waga_team2=0.4)
+
+
+def oblicz_statystyki_bramkoszczelnosci(recent_matches):
+    possession, corners, goals, shots, penalties = 0, 0, 0, 0, 0
+
+    for match in recent_matches:
+        possession += oblicz_possession(match)
+        corners += oblicz_corners(match)
+        goals += oblicz_goals(match)
+        shots += oblicz_shots(match)
+        penalties += oblicz_penalties(match)
+
+    max_values = {
+        "possession": 70 * len(recent_matches),
+        "corners": 10 * len(recent_matches),
+        "goals": 5 * len(recent_matches),
+        "shots": 20 * len(recent_matches),
+        "penalties": 10 * len(recent_matches),
+    }
+
+    values = {
+        "possession": min(possession, max_values["possession"]),
+        "corners": min(corners, max_values["corners"]),
+        "goals": min(goals, max_values["goals"]),
+        "shots": min(shots, max_values["shots"]),
+        "penalties": min(penalties, max_values["penalties"]),
+    }
+
+    return znormalizuj_wg_bramkoszczelnosci(values, max_values)
+
+
+def znormalizuj_wg_bramkoszczelnosci(values, max_values):
+    wg_raw = (
+        0.3 * values["possession"] +
+        0.1 * values["corners"] +
+        0.5 * values["goals"] +
+        0.3 * values["shots"] +
+        0.4 * values["penalties"]
+    )
+    max_wg = (
+        0.3 * max_values["possession"] +
+        0.1 * max_values["corners"] +
+        0.5 * max_values["goals"] +
+        0.3 * max_values["shots"] +
+        0.4 * max_values["penalties"]
+    )
+    return (wg_raw / max_wg * 100) if max_wg > 0 else 0
+
+
+def wylicz_srednia_wazona(wg_team1, wg_team2, waga_team1=0.6, waga_team2=0.4):
    
-    wg_team1 = oblicz_wg(matches_team1)
-    wg_team2 = oblicz_wg(matches_team2)
+    return round((wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2), 2)
 
 
-  
-    waga_team1 = 0.6  
-    waga_team2 = 0.4  
 
-    
-    weighted_avg_wg = (wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2)
+def oblicz_form(standing):
+    form = 0
+    for value in (standing.form or ""):
+        if value == "W":
+            form += 3
+        elif value == "D":
+            form += 1
+    return form
 
-    return round(weighted_avg_wg, 2)  
+def oblicz_ofensywa(recent_matches):
+    offense = 0
+    for match in recent_matches:
+        offense += (match.home_score or 0) + (match.away_score or 0)
+    return offense
+
+def oblicz_obrona(recent_matches):
+    defense = 0
+    for match in recent_matches:
+        defense += (match.away_score or 0) + (match.home_score or 0)
+    return defense
+
+def oblicz_wskaznik_wg_ogolna(match):
+    """Oblicza wskaźnik ogólnej wartości WG na podstawie meczów i pozycji drużyn w tabeli."""
+    team1_id = match.home_team_id
+    team2_id = match.away_team_id
+
+    matches_team1 = finished_last_match(team1_id, match.season.start_year, match.season.end_year, 5)
+    matches_team2 = finished_last_match(team2_id, match.season.start_year, match.season.end_year, 5)
+
+    standing1 = get_standing_team(team1_id, match.season.season_id)
+    standing2 = get_standing_team(team2_id, match.season.season_id)
+
+    weight = oblicz_wage(standing1.position, standing2.position)
+
+    wg_team1 = oblicz_statystyki_wg(matches_team1, standing1)
+    wg_team2 = oblicz_statystyki_wg(matches_team2, standing2)
+
+    return wylicz_srednia_wazona_weight(wg_team1, wg_team2, weight)
 
 
-def oblicz_wskaznik_wg_bramkoszczelnosc(team1_id, team2_id):
+def oblicz_wage(rank1, rank2):
+    """Oblicza wagę na podstawie pozycji drużyn w tabeli."""
+    if rank1 <= 3 and rank2 <= 3:
+        return 1.0
+    elif (rank1 <= 3 and 4 <= rank2 <= 8) or (rank2 <= 3 and 4 <= rank1 <= 8):
+        return 0.85
+    elif (rank1 <= 3 and 9 <= rank2 <= 15) or (rank2 <= 3 and 9 <= rank1 <= 15):
+        return 0.7
+    elif (rank1 <= 3 and rank2 > 15) or (rank2 <= 3 and rank1 > 15):
+        return 0.5
+    elif (4 <= rank1 <= 8 and 4 <= rank2 <= 8):
+        return 0.75
+    elif (4 <= rank1 <= 8 and rank2 > 15) or (4 <= rank2 <= 8 and rank1 > 15):
+        return 0.6
+    elif rank1 > 15 and rank2 > 15:
+        return 0.4
+    else:
+        return 0.5
 
-    matches_team1 = finished_Team(team1_id, 2024, 2025, 5)
-    matches_team2 = finished_Team(team2_id, 2024, 2025, 5)
 
-    def oblicz_wg(recent_matches):
+def oblicz_statystyki_wg(recent_matches, standing):
+    """Oblicza znormalizowany wskaźnik WG dla drużyny."""
+    form = oblicz_form(standing)
+    offense = oblicz_ofensywa(recent_matches)
+    defense = oblicz_obrona(recent_matches)
 
-        possession = 0
-        corners = 0
-        goals = 0
-        shots = 0
-        penalties = 0
+    max_form = 15
+    max_offense = 30
+    max_defense = 30
 
-        for match in recent_matches:
-            possession += (match.home_team_ball_possession or 0) + (match.away_team_ball_possession or 0)
-            corners += (match.home_team_corner_kicks or 0) + (match.away_team_corner_kicks or 0)
-            goals += (match.home_score or 0) + (match.away_score or 0)
-            shots += (match.home_team_total_shots or 0) + (match.away_team_total_shots or 0)
-            penalties += (match.home_team_offsides or 0) + (match.away_team_offsides or 0)  
+    defense = max(0, max_defense - defense)
 
-        wg_raw = 0.2 * possession + 0.05 * corners + 0.5 * goals + 0.3 * shots + 0.4 * penalties
+    return znormalizuj_wg(form, offense, defense, max_form, max_offense, max_defense)
 
-        
-        max_possession = 100
-        max_corners = 20
-        max_goals = 5
-        max_shots = 20
-        max_penalties = 5
-        max_wg = 0.2 * max_possession + 0.05 * max_corners + 0.5 * max_goals + 0.3 * max_shots + 0.4 * max_penalties
-        wg_normalized = wg_raw / max_wg if max_wg > 0 else 0
-        return wg_normalized * 100  
 
-    wg_team1 = oblicz_wg(matches_team1)
-    wg_team2 = oblicz_wg(matches_team2)
+def znormalizuj_wg(form, offense, defense, max_form, max_offense, max_defense):
+    """Normalizuje wskaźnik WG na podstawie parametrów ofensywnych i defensywnych."""
+    wg_raw = 0.4 * form + 0.3 * offense + 0.1 * defense
+    max_wg = 0.4 * max_form + 0.3 * max_offense + 0.1 * max_defense
+    return (wg_raw / max_wg * 100) if max_wg > 0 else 0
 
-    waga_team1 = 0.6  
-    waga_team2 = 0.4  
 
-    weighted_avg_wg = (wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2)
-
-    return round(weighted_avg_wg, 2) 
-
-def oblicz_wskaznik_wg_ogólna(team1_id, team2_id):
-
-    matches_team1 = finished_Team(team1_id, 2024, 2025, 5)
-    matches_team2 = finished_Team(team2_id, 2024, 2025, 5)
-
-    start = 2024
-    team1 = Team.query.get(team1_id)
-
-    season = Season.query.filter_by(league_id=team1.league_id, start_year=start).first()
-
-    standing1 = Standing.query.filter_by(team_id=team1_id, season_id = season.season_id).first()     
-    standing2 = Standing.query.filter_by(team_id=team2_id, season_id = season.season_id).first()
-
-    def get_team_rank(team_id):
-        standing = Standing.query.filter_by(team_id=team_id).first()
-        return standing.position if standing else 0
-
-    rank_team1 = get_team_rank(team1_id)
-    rank_team2 = get_team_rank(team2_id)
-
-    def get_weight(rank1, rank2):
-        if rank1 <= 3 and rank2 <= 3:
-            return 1
-        elif (rank1 <= 3 and 4 <= rank2 <= 8) or (rank2 <= 3 and 4 <= rank1 <= 8):
-            return 0.8
-        elif (rank1 <= 3 and 9 <= rank2 <= 15) or (rank2 <= 3 and 9 <= rank1 <= 15):
-            return 0.6
-        elif (rank1 <= 3 and rank2 > 15) or (rank2 <= 3 and rank1 > 15):
-            return 0.4
-        else:
-            return 0.5
-
-    weight = get_weight(rank_team1, rank_team2)
-
-    def oblicz_wg(recent_matches, standing):
-
-        form = 0
-        offense = 0
-        defense = 0
-        for value in (standing.form or ""):
-            if value == "W":
-                form += 3
-            elif value == "D":
-                form += 1
-
-        for match in recent_matches:
-
-            offense += (match.home_score or 0) + (match.away_score or 0)
-            defense += (match.away_score or 0) + (match.home_score or 0)
-
-        wg_raw = 0.4 * form + 0.3 * offense - 0.1 * defense
-
-        max_form = 15  
-        max_offense = 20  
-        max_defense = 20  
-        max_wg = 0.4 * max_form + 0.3 * max_offense - 0.1 * max_defense
-        wg_normalized = wg_raw / max_wg if max_wg > 0 else 0
-        return wg_normalized * 100
-
-    wg_team1 = oblicz_wg(matches_team1, standing1)
-    wg_team2 = oblicz_wg(matches_team2, standing2)
-
+def wylicz_srednia_wazona_weight(wg_team1, wg_team2, weight):
+    """Wylicza średnią ważoną wskaźnika WG dla dwóch drużyn."""
     waga_team1 = 0.6 * weight
     waga_team2 = 0.4 * weight
+    return round((wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2), 2)
 
-    weighted_avg_wg = (wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2)
+def update_wskazniki(league_id):
 
-    return round(weighted_avg_wg, 2)
+    next_round = next_round_league(league_id)
 
+    upcoming_matches = get_upcoming_matches_by_round(league_id, next_round)
+
+    for match in upcoming_matches:
+        wg_agresji = oblicz_wskaznik_agresji(match)
+        wg_bramkoszczelnosc = oblicz_wskaznik_wg_bramkoszczelnosc(match)
+        wg_ogolna = oblicz_wskaznik_wg_ogolna(match)
+
+        match.fans_rank_defence = wg_agresji
+        match.fans_rank_attak = wg_bramkoszczelnosc
+        match.fans_rank_generally = wg_ogolna
+
+        db.session.merge(match)
+        db.session.commit()
 
 
 def check_results(league_id):
@@ -468,41 +529,7 @@ def update_standing_form():
 
             db.session.commit()
 
-def update_wskazniki(league_id):
-    season = Season.query.filter_by(league_id=league_id, is_current=True).first()
-    season_id = season.season_id if season else None
 
-    next_match = db.session.query(Match).join(Season).join(League).filter(
-        Match.type == 'Scheduled',
-        League.league_id== league_id
-    ).order_by(Match.match_date).first()
-
-    next_round = next_match.round
-
-    upcoming_matches = db.session.query(Match).join(Season).join(League).filter(
-        Match.round == next_round,
-        League.league_id== league_id,
-        Match.type == 'Scheduled'
-    ).order_by(Match.match_date).all()
-
-    for match in upcoming_matches:
-        team1_id = match.home_team_id
-        team2_id = match.away_team_id
-
-        wg_agresji = oblicz_wskaznik_agresji(team1_id, team2_id)
-        wg_bramkoszczelnosc = oblicz_wskaznik_wg_bramkoszczelnosc(team1_id, team2_id)
-        wg_ogolna = oblicz_wskaznik_wg_ogólna(team1_id, team2_id)
-
-        print(f"Wskaźnik agresji: {wg_agresji}")
-        print(f"Wskaźnik bramkoszczelności: {wg_bramkoszczelnosc}")
-        print(f"Wskaźnik ogólna: {wg_ogolna}")
-
-        match.fans_rank_defence = wg_agresji
-        match.fans_rank_attak = wg_bramkoszczelnosc
-        match.fans_rank_generally = wg_ogolna
-
-        db.session.merge(match)
-        db.session.commit()
 
 def extract_round_number(round_name):
     
@@ -613,9 +640,6 @@ def check_update(league_id):
         update_league(league_id)
     else:
         print("Brak nowych wyników")
-
-def my_function():
-    print("Funkcja uruchomiona")
 
 
 import random

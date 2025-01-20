@@ -99,3 +99,6 @@ def get_standings_away(league_name, season):
         team['position'] = index
 
     return standings_data
+
+def get_standing_team(team_id, season_id):
+    return Standing.query.filter_by(team_id=team_id, season_id = season_id).first()   

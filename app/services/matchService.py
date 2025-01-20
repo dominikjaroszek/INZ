@@ -3,12 +3,48 @@ from datetime import datetime
 from app.models.match import Match
 from app.models.season import Season
 from app.models.league import League
+from app.models.team import Team
 from app.config import db
 from sqlalchemy.orm import joinedload
 
+def get_match_by_id(match_id):
+    return db.session.query(Match).filter(Match.match_id == match_id).first()
+
+def next_round_league(league_id):
+    next_match = db.session.query(Match).join(Season).join(League).filter(
+        Match.type == 'Scheduled',
+        League.league_id== league_id
+    ).order_by(Match.match_date).first()
+
+    return next_match.round
+
+def finished_last_match(team1_id, start_year, end_year, limit):
+
+    now = datetime.now()
+    team = db.session.query(Team).filter_by(team_id=team1_id).first()
+    if not team:
+        return {'error': 'Team not found'}
+    
+    matches = db.session.query(Match).join(Season).filter(
+        (Match.home_team_id == team.team_id) | (Match.away_team_id == team.team_id), 
+        Match.type == 'Not Played' or  Match.type == 'Abandoned' or Match.type == 'Finished',
+        Season.start_year == start_year,   
+        Season.end_year == end_year,       
+        Match.match_date < now,
+    ).order_by(Match.match_date.desc()).limit(limit).all()
+
+    return matches
+
+def get_upcoming_matches_by_round(league_id, next_round):
+    upcoming_matches = db.session.query(Match).join(Season).join(League).filter(
+        Match.round == next_round,
+        League.league_id== league_id,
+        Match.type == 'Scheduled'
+    ).order_by(Match.match_date).all()
+
+    return upcoming_matches
 
 def get_upcoming_rounds():
-    now = datetime.now()
 
     leagues = db.session.query(League).all()
     matches_by_league = []
@@ -218,8 +254,11 @@ def get_live_matches_by_league(league_name):
 
     return matches_list
 
+def get_match_by_id_data(match_id):
+    return db.session.query(Match).filter(Match.match_id == match_id).first()
+
 def get_match_by_id(match_id):
-    match = db.session.query(Match).filter(Match.match_id == match_id).first()
+    match = get_match_by_id_data(match_id)
     if not match:
         return None
     if match.type == 'Finished':

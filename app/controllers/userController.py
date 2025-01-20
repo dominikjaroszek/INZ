@@ -118,10 +118,10 @@ def change_password_controller(current_user):
 
     user = get_user_by_id(current_user.user_id)
     if not check_password_controller(user, data.oldPassword):
-        return jsonify({'message': 'Nieprawidłowe hasło'}), 401
+        return jsonify({'message': 'Wrong password'}), 401
 
     if data.oldPassword == data.newPassword:
-        return jsonify({'message': 'Nowe hasło musi się różnić od starego'}), 400
+        return jsonify({'message': 'The new password must be used over the old one'}), 400
 
     change_password(data, user )
-    return jsonify({'message': 'Hasło zmienione pomyślnie'}), 200
+    return jsonify({'message': 'Password changed successfully'}), 200

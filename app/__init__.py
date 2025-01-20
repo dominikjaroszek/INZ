@@ -17,10 +17,11 @@ from .controllers.userController import user_bp
 from .controllers.matchRatingController import matchRating_bp
 from .controllers.apiController import api_bp
 
-def create_app():
+
+def create_app(baza):
     app = Flask(__name__)
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URI")
+    app.config["SQLALCHEMY_DATABASE_URI"] = baza
     app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
