@@ -258,7 +258,8 @@ def get_match_by_id_data(match_id):
     return db.session.query(Match).filter(Match.match_id == match_id).first()
 
 def get_match_by_type_and_season(match_type, season ):
-    Match.query.filter(Match.type == match_type, Match.season == season).all()
+    return Match.query.filter(Match.type == match_type, Match.season == season).all()
+    
 
 def get_match_by_id(match_id):
     match = get_match_by_id_data(match_id)

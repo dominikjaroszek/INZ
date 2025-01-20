@@ -20,8 +20,8 @@ def run_periodically(interval, func, *args, **kwargs):
     thread.daemon = True
     thread.start()
 
-# run_periodically(60, check_update, 39)
-# run_periodically(60, check_update, 140)
+# run_periodically(1800, check_update, 39)
+# run_periodically(1800, check_update, 140)
 
 if __name__ == "__main__":
     with app.app_context():

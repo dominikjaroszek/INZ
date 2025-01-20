@@ -213,6 +213,8 @@ def oblicz_statystyki_wg(recent_matches, standing):
     max_offense = 30
     max_defense = 30
 
+    form = min(max_form, form)
+    offense = min(max_offense, offense)
     defense = max(0, max_defense - defense)
 
     return znormalizuj_wg(form, offense, defense, max_form, max_offense, max_defense)
@@ -264,16 +266,32 @@ def fetch_match_statistics(match_id):
         return None
 
 def check_results(league_id):
-    season = get_season_by_league_id_and_current_season(league_id)
-    matches = get_match_by_type_and_season("Scheduled", season)
+    season = Season.query.filter_by(league_id=league_id, is_current=True).first()
+    matches = Match.query.filter(Match.type == "Scheduled", Match.season == season).all()
     matches = sorted(matches, key=lambda x: x.match_date)
     matches = matches[:5]
 
     for match in matches:
-        data = fetch_match_statistics(match.match_id)
+        url = f"{BASE_URL}fixtures/statistics"
+        params = {"fixture": match.match_id}
 
-        if data and data.get("results", 0) > 0 and "response" in data:
+        try:
+            response = requests.get(url, headers=HEADERS, params=params)
+            response.raise_for_status() 
+            data = response.json()
+        except requests.RequestException as e:
+            print(f"Błąd połączenia z API: {e}")
+            continue  
+        except ValueError:
+            print("Niepoprawna odpowiedź JSON")
+            continue
+
+       
+        if data.get("results", 0) > 0 and "response" in data:
+            print(f"Znaleziono dane dla meczu {match.match_id}")
             return True
+        else:
+            print(f"Brak wyników dla meczu {match.match_id}: {data}")
 
     print("Zakończono sprawdzanie wyników brak nowych wyników")
     return False
@@ -291,9 +309,9 @@ def calculate_cards_total(team_statistics, card_color):
 
 
 def update_standing(league_id):
-    season = get_season_by_league_id_and_current_season(league_id)
+    season = Season.query.filter_by(league_id=league_id, is_current=True).first()
     season_start = season.start_year if season else None
-    time.sleep(7)
+  
     standings = fetch_standings_data(league_id, season_start)
     time.sleep(7)
     for standing_data in standings:
@@ -301,7 +319,7 @@ def update_standing(league_id):
         team = Team.query.get(team_id)
         if not team:
             continue
-        standing_db = get_standing_by_team_and_season_id(team_id, season.season_id)
+        standing_db = Standing.query.filter_by(team_id=team_id, season_id=season.season_id).first()
 
         if standing_db:
             print(f"Znaleziono rekord dla drużyny {team.team_name}")
@@ -390,7 +408,7 @@ import requests
 def update_matches(league_id):
     now = datetime.now()
 
-    season = get_season_by_league_id_and_current_season(league_id)
+    season = Season.query.filter_by(league_id=league_id, is_current=True).first()
     season_year = season.start_year if season else None
 
    
@@ -510,7 +528,7 @@ def update_standing_form():
                         else:
                             form += "L"
                     
-            standing = get_standing_by_team_and_season_id
+            standing = Standing.query.filter_by(team_id=team.team_id, season_id=season_id).first()
             if standing:
                 standing.form = form[::-1]
 
@@ -621,6 +639,7 @@ def update_league(league_id):
     update_top_scorers(league_id)
     update_matches(league_id)
     update_wskazniki(league_id)
+    print("Zaktualizowano dane ligi")
 
 def check_update(league_id):
     if check_results(league_id):
