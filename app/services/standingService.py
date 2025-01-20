@@ -3,6 +3,16 @@ from app.models.league import League
 from app.models.season import Season
 from app.config import db
 
+def get_standing_by_id(standing_id):
+    return Standing.query.get(standing_id)
+
+def get_standing_by_team_and_season_id(team_id, season_id):
+    return Standing.query.filter_by(team_id=team_id, season_id=season_id).first()
+
+def get_season_by_league_id_and_current_season(league_id):
+    return Season.query.filter_by(league_id=league_id, current=True).first()
+
+
 def get_standings(league_name, season):
     season_start_year = season.split('-')[0]
 

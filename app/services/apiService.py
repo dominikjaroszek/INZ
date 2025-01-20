@@ -10,8 +10,8 @@ from app.models.top_scorer import TopScorer
 from app.services.fetchService import *
 import pytz
 import time
-from app.services.standingService import get_standing_team
-from app.services.matchService import finished_last_match,next_round_league, get_upcoming_matches_by_round
+from app.services.standingService import get_standing_team, get_season_by_league_id_and_current_season, get_standing_by_team_and_season_id
+from app.services.matchService import finished_last_match,next_round_league, get_upcoming_matches_by_round, get_match_by_type_and_season
 
 
 def oblicz_faule(match):
@@ -62,7 +62,6 @@ def oblicz_wskaznik_agresji(match):
 
 
 def wylicz_wazona_srednia(wg_team1, wg_team2, waga_team1=0.6, waga_team2=0.4):
-    """Wylicza średnią ważoną wskaźnika agresji dla dwóch drużyn."""
     return round((wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2), 2)
 
 
@@ -82,7 +81,6 @@ def oblicz_penalties(match):
     return (match.home_team_offsides or 0) + (match.away_team_offsides or 0)
 
 def oblicz_wskaznik_wg_bramkoszczelnosc(match):
-    """Oblicza wskaźnik bramkoszczelności na podstawie ostatnich meczów obu drużyn."""
     team1_id = match.home_team_id
     team2_id = match.away_team_id
 
@@ -170,7 +168,6 @@ def oblicz_obrona(recent_matches):
     return defense
 
 def oblicz_wskaznik_wg_ogolna(match):
-    """Oblicza wskaźnik ogólnej wartości WG na podstawie meczów i pozycji drużyn w tabeli."""
     team1_id = match.home_team_id
     team2_id = match.away_team_id
 
@@ -189,7 +186,6 @@ def oblicz_wskaznik_wg_ogolna(match):
 
 
 def oblicz_wage(rank1, rank2):
-    """Oblicza wagę na podstawie pozycji drużyn w tabeli."""
     if rank1 <= 3 and rank2 <= 3:
         return 1.0
     elif (rank1 <= 3 and 4 <= rank2 <= 8) or (rank2 <= 3 and 4 <= rank1 <= 8):
@@ -209,7 +205,6 @@ def oblicz_wage(rank1, rank2):
 
 
 def oblicz_statystyki_wg(recent_matches, standing):
-    """Oblicza znormalizowany wskaźnik WG dla drużyny."""
     form = oblicz_form(standing)
     offense = oblicz_ofensywa(recent_matches)
     defense = oblicz_obrona(recent_matches)
@@ -224,14 +219,12 @@ def oblicz_statystyki_wg(recent_matches, standing):
 
 
 def znormalizuj_wg(form, offense, defense, max_form, max_offense, max_defense):
-    """Normalizuje wskaźnik WG na podstawie parametrów ofensywnych i defensywnych."""
     wg_raw = 0.4 * form + 0.3 * offense + 0.1 * defense
     max_wg = 0.4 * max_form + 0.3 * max_offense + 0.1 * max_defense
     return (wg_raw / max_wg * 100) if max_wg > 0 else 0
 
 
 def wylicz_srednia_wazona_weight(wg_team1, wg_team2, weight):
-    """Wylicza średnią ważoną wskaźnika WG dla dwóch drużyn."""
     waga_team1 = 0.6 * weight
     waga_team2 = 0.4 * weight
     return round((wg_team1 * waga_team1 + wg_team2 * waga_team2) / (waga_team1 + waga_team2), 2)
@@ -255,38 +248,35 @@ def update_wskazniki(league_id):
         db.session.commit()
 
 
+def fetch_match_statistics(match_id):
+    url = f"{BASE_URL}fixtures/statistics"
+    params = {"fixture": match_id}
+
+    try:
+        response = requests.get(url, headers=HEADERS, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"Błąd połączenia z API: {e}")
+        return None
+    except ValueError:
+        print("Niepoprawna odpowiedź JSON")
+        return None
+
 def check_results(league_id):
-    season = Season.query.filter_by(league_id=league_id, is_current=True).first()
-    matches = Match.query.filter(Match.type == "Scheduled", Match.season == season).all()
+    season = get_season_by_league_id_and_current_season(league_id)
+    matches = get_match_by_type_and_season("Scheduled", season)
     matches = sorted(matches, key=lambda x: x.match_date)
     matches = matches[:5]
 
     for match in matches:
-        url = f"{BASE_URL}fixtures/statistics"
-        params = {"fixture": match.match_id}
+        data = fetch_match_statistics(match.match_id)
 
-        try:
-            response = requests.get(url, headers=HEADERS, params=params)
-            response.raise_for_status() 
-            data = response.json()
-        except requests.RequestException as e:
-            print(f"Błąd połączenia z API: {e}")
-            continue  
-        except ValueError:
-            print("Niepoprawna odpowiedź JSON")
-            continue
-
-       
-        if data.get("results", 0) > 0 and "response" in data:
-            print(f"Znaleziono dane dla meczu {match.match_id}")
+        if data and data.get("results", 0) > 0 and "response" in data:
             return True
-        else:
-            print(f"Brak wyników dla meczu {match.match_id}: {data}")
 
     print("Zakończono sprawdzanie wyników brak nowych wyników")
     return False
-
-
 
 def calculate_cards_total(team_statistics, card_color):
 
@@ -301,9 +291,9 @@ def calculate_cards_total(team_statistics, card_color):
 
 
 def update_standing(league_id):
-    season = Season.query.filter_by(league_id=league_id, is_current=True).first()
+    season = get_season_by_league_id_and_current_season(league_id)
     season_start = season.start_year if season else None
-  
+    time.sleep(7)
     standings = fetch_standings_data(league_id, season_start)
     time.sleep(7)
     for standing_data in standings:
@@ -311,7 +301,7 @@ def update_standing(league_id):
         team = Team.query.get(team_id)
         if not team:
             continue
-        standing_db = Standing.query.filter_by(team_id=team_id, season_id=season.season_id).first()
+        standing_db = get_standing_by_team_and_season_id(team_id, season.season_id)
 
         if standing_db:
             print(f"Znaleziono rekord dla drużyny {team.team_name}")
@@ -400,7 +390,7 @@ import requests
 def update_matches(league_id):
     now = datetime.now()
 
-    season = Season.query.filter_by(league_id=league_id, is_current=True).first()
+    season = get_season_by_league_id_and_current_season(league_id)
     season_year = season.start_year if season else None
 
    
@@ -520,8 +510,7 @@ def update_standing_form():
                         else:
                             form += "L"
                     
-            standing = Standing.query.filter_by(team_id=team.team_id, season_id=season_id).first()
-            
+            standing = get_standing_by_team_and_season_id
             if standing:
                 standing.form = form[::-1]
 
@@ -632,11 +621,9 @@ def update_league(league_id):
     update_top_scorers(league_id)
     update_matches(league_id)
     update_wskazniki(league_id)
-    print("Zaktualizowano dane ligi")
 
 def check_update(league_id):
     if check_results(league_id):
-        time.sleep(7)
         update_league(league_id)
     else:
         print("Brak nowych wyników")
