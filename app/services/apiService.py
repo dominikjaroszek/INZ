@@ -635,9 +635,9 @@ def update_match_details_back(league_id):
 
 def update_league(league_id):
     update_standing(league_id)
+    update_matches(league_id)
     update_standing_form()
     update_top_scorers(league_id)
-    update_matches(league_id)
     update_wskazniki(league_id)
     print("Zaktualizowano dane ligi")
 

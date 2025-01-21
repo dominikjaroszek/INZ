@@ -31,8 +31,8 @@ class Match:
         self.away_team_corner_kicks = away_team_corner_kicks
         self.home_team_total_shots = home_team_total_shots
         self.away_team_total_shots = away_team_total_shots
-        self.home_team_offsides = home_team_offsides  # Dodajemy atrybut "home_team_offsides"
-        self.away_team_offsides = away_team_offsides  # Dodajemy atrybut "away_team_offsides"
+        self.home_team_offsides = home_team_offsides  
+        self.away_team_offsides = away_team_offsides 
 
 class Standing:
     def __init__(self, form=None):
@@ -40,7 +40,6 @@ class Standing:
 
 @pytest.fixture
 def mock_data():
-    # Mockowane mecze z uwzględnieniem ofsajdów
     return [
         Match(home_score=2, away_score=1, home_team_ball_possession=60, home_team_corner_kicks=5, away_team_corner_kicks=3,
               home_team_total_shots=15, away_team_total_shots=10, home_team_offsides=2, away_team_offsides=1),
